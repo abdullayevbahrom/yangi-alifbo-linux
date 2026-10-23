@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+.tmp/
+build/
+dist/
+yangi-alifbo-ibus-*/

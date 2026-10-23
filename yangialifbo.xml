@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component>
+    <name>org.freedesktop.IBus.YangiAlifbo</name>
+    <description>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ) Kirish Dvigateli</description>
+    <exec>/home/acer/.local/share/ibus-yangialifbo/engine.py --ibus</exec>
+    <version>1.0.0</version>
+    <author>His perspective &lt;https://t.me/hisperspective&gt;</author>
+    <license>MIT</license>
+    <homepage>https://224.uz/alifbo/</homepage>
+    <textdomain>ibus-yangialifbo</textdomain>
+    <engines>
+        <engine>
+            <name>yangialifbo</name>
+            <language>uz</language>
+            <license>MIT</license>
+            <author>His perspective</author>
+            <icon>/home/acer/.local/share/ibus-yangialifbo/yangialifbo.svg</icon>
+            <layout>us</layout>
+            <longname>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ)</longname>
+            <description>sh-&gt;ş, ch-&gt;ç, o'-&gt;ö, g'-&gt;ğ avtomatik almashtiruvchi kiritish usuli</description>
+            <rank>99</rank>
+            <symbol>ş</symbol>
+        </engine>
+    </engines>
+</component>
