@@ -22,6 +22,7 @@ echo -e "${BLUE}======================================================${NC}"
 TARGET_HOME="${HOST_HOME:-$HOME}"
 INSTALL_DIR="$TARGET_HOME/.local/share/ibus-yangialifbo"
 COMPONENT_DIR="$TARGET_HOME/.local/share/ibus/component"
+AUTOSTART_DIR="$TARGET_HOME/.config/autostart"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -36,13 +37,13 @@ fi
 # IBus tekshirish
 if ! command -v ibus >/dev/null 2>&1; then
     echo -e "${YELLOW}IBus topilmadi. O'rnatilmoqda (sudo talab qilinishi mumkin)...${NC}"
-    sudo apt-get update && sudo apt-get install -y ibus gir1.2-ibus-1.0 python3-gi
+    sudo apt-get update && sudo apt-get install -y ibus gir1.2-ibus-1.0 python3-gi python3-xlib
 fi
 
-# python3-gi tekshirish
+# python3-gi va python3-xlib tekshirish
 if ! /usr/bin/python3 -c "import gi; gi.require_version('IBus', '1.0'); from gi.repository import IBus" >/dev/null 2>&1; then
     echo -e "${YELLOW}IBus Python kutubxonalari yetishmayapti. O'rnatilmoqda...${NC}"
-    sudo apt-get update && sudo apt-get install -y gir1.2-ibus-1.0 python3-gi python3-ibus-1.0
+    sudo apt-get update && sudo apt-get install -y gir1.2-ibus-1.0 python3-gi python3-ibus-1.0 python3-xlib
 fi
 
 echo -e "${GREEN}✓ Barcha talablar mavjud.${NC}"
@@ -50,6 +51,7 @@ echo -e "${GREEN}✓ Barcha talablar mavjud.${NC}"
 echo -e "\n${BLUE}2. Fayllarni ko'chirish...${NC}"
 mkdir -p "$INSTALL_DIR"
 mkdir -p "$COMPONENT_DIR"
+mkdir -p "$AUTOSTART_DIR"
 
 cp "$SCRIPT_DIR/engine.py" "$INSTALL_DIR/engine.py"
 chmod +x "$INSTALL_DIR/engine.py"
@@ -63,7 +65,7 @@ cat > "$COMPONENT_DIR/yangialifbo.xml" <<EOF
     <name>org.freedesktop.IBus.YangiAlifbo</name>
     <description>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ) Kirish Dvigateli</description>
     <exec>${INSTALL_DIR}/engine.py --ibus</exec>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <author>His perspective &lt;https://t.me/hisperspective&gt;</author>
     <license>MIT</license>
     <homepage>https://224.uz/alifbo/</homepage>
@@ -93,7 +95,26 @@ fi
 
 echo -e "${GREEN}✓ Dvigatel va komponent muvaffaqiyatli o'rnatildi: $INSTALL_DIR${NC}"
 
-echo -e "\n${BLUE}3. IBus keshini yangilash va qayta ishga tushirish...${NC}"
+echo -e "\n${BLUE}3. NumLock va Tizim integratsiyasi...${NC}"
+# COSMIC Desktop uchun NumLock-ni BootOn qilib belgilash
+COSMIC_KB_CONFIG="$TARGET_HOME/.config/cosmic/com.system76.CosmicComp/v1/keyboard_config"
+if [ -d "$(dirname "$COSMIC_KB_CONFIG")" ]; then
+    cat > "$COSMIC_KB_CONFIG" <<EOF
+(
+    numlock_state: BootOn,
+)
+EOF
+    echo -e "${GREEN}✓ COSMIC NumLock holati: BootOn (har doim yoniq)${NC}"
+fi
+
+# GNOME Desktop uchun NumLock holati
+if command -v gsettings >/dev/null 2>&1; then
+    gsettings set org.gnome.desktop.peripherals.keyboard remember-numlock-state true 2>/dev/null || true
+    gsettings set org.gnome.desktop.peripherals.keyboard numlock-state true 2>/dev/null || true
+    gsettings set org.freedesktop.ibus.general use-system-keyboard-layout true 2>/dev/null || true
+fi
+
+echo -e "\n${BLUE}4. IBus keshini yangilash va qayta ishga tushirish...${NC}"
 ibus write-cache >/dev/null 2>&1 || true
 ibus restart >/dev/null 2>&1 || true
 sleep 1
@@ -105,14 +126,12 @@ else
     echo -e "${YELLOW}! Kesh yangilandi. IBus qayta ishga tushgach ro'yxatda paydo bo'ladi.${NC}"
 fi
 
-echo -e "\n${BLUE}4. Kiritish usulini sozlash...${NC}"
 # GNOME desktop uchun avtomatik qo'shish imkoniyatini tekshirish
 if command -v gsettings >/dev/null 2>&1; then
     CURRENT_SOURCES=$(gsettings get org.gnome.desktop.input-sources sources 2>/dev/null || echo "")
     if [[ "$CURRENT_SOURCES" == *"yangialifbo"* ]]; then
         echo -e "${GREEN}✓ 'yangialifbo' allaqachon kirish manbalari ro'yxatida mavjud.${NC}"
     elif [ -n "$CURRENT_SOURCES" ] && [ "$CURRENT_SOURCES" != "@a(ss) []" ]; then
-        # Oxiriga qo'shish
         NEW_SOURCES="${CURRENT_SOURCES%]*}, ('ibus', 'yangialifbo')]"
         gsettings set org.gnome.desktop.input-sources sources "$NEW_SOURCES" 2>/dev/null || true
         echo -e "${GREEN}✓ GNOME sozlamalariga 'Yangi Oʻzbek Alifbosi' qo'shildi.${NC}"
@@ -123,13 +142,11 @@ echo -e "\n${GREEN}======================================================${NC}"
 echo -e "${GREEN}  TABRIKLAYMIZ! Oʻrnatish muvaffaqiyatli yakunlandi!   ${NC}"
 echo -e "${GREEN}======================================================${NC}"
 echo -e "Foydalanish boʻyicha qoʻllanma:"
-echo -e "  1. Klaviaturani almashtirish: ${YELLOW}Super (Win) + Boʻsh joy (Space)${NC}"
-echo -e "  2. Matn yozish:"
+echo -e "  1. Uzbek Latin (uz) da: ${GREEN}Avtomatik ishlaydi!${NC}"
 echo -e "     - ${GREEN}sh${NC}  →  ${GREEN}ş${NC}"
 echo -e "     - ${GREEN}ch${NC}  →  ${GREEN}ç${NC}"
 echo -e "     - ${GREEN}o'${NC}  →  ${GREEN}ö${NC}"
 echo -e "     - ${GREEN}g'${NC}  →  ${GREEN}ğ${NC}"
-echo -e "  3. Vaqtincha yoqish / oʻchirish: ${YELLOW}Ctrl + Alt + Y${NC}"
-echo -e "  4. Agar roʻyxatda koʻrinmasa: Sozlamalar (Settings) → Keyboard → Input Sources → Add (+)"
-echo -e "     boʻlimidan 'Yangi Oʻzbek Alifbosi'ni tanlang yoki tizimdan chiqib qayta kiring (Log out/Log in)."
+echo -e "  2. English (us) da: Oddiy yozuv. Kerak bo'lsa ${YELLOW}Ctrl + Alt + Y${NC} bilan yoqiladi."
+echo -e "  3. Numpad (raqamlar bloki): NumLock o'chiq bo'lsa ham ${GREEN}har doim raqam${NC} yozadi."
 echo -e "======================================================\n"

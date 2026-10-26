@@ -11,11 +11,12 @@ Avtomatik almashtirishlar:
   o' / o` / o‘ / o’ / oʻ / oʼ -> ö  (O' -> Ö)
   g' / g` / g‘ / g’ / gʻ / gʼ -> ğ  (G' -> Ğ)
 
-Maxsus imkoniyatlar:
-  - Faqat Uzbek Latin (uz) klaviatura tartibida ishlaydi (US yoki RU rejimida xalaqit bermaydi)
-  - Preedit ishlatilmaydi — harflar 2 marta chiqishi (sş, cç) 100% bartaraf etilgan
-  - Numpad va navigatsiya tugmalari to'g'ridan-to'g'ri o'tkaziladi
-  - Ctrl+Alt+Y — drayverni vaqtincha yoqish / o'chirish
+Universal imkoniyatlar:
+  - Uzbek Latin (uz) klaviatura tartibida 100% avtomatik ishlaydi
+  - US (English) tartibida odatiy yozuv, kerak bo'lsa Ctrl+Alt+Y orqali yoqiladi
+  - Numpad (raqamlar bloki) NumLock holatidan qat'i nazar har doim raqam yozadi
+  - Wayland (COSMIC, GNOME, KDE) va eski X11 tizimlarida universal ishlaydi
+  - Preedit desinxronizatsiyasi yo'q (harflar 2 marta takrorlanmaydi)
 """
 
 import os
@@ -35,16 +36,30 @@ except ImportError:
 APOSTROPHES = {"'", "`", "‘", "’", "ʻ", "ʼ", chr(0x02BB), chr(0x02BC)}
 PREFIX_KEYS = {'s', 'S', 'c', 'C', 'o', 'O', 'g', 'G'}
 
-# Numpad (Keypad) va NumLock tugmalari
-NUMPAD_KEYVALS = {
-    IBus.KEY_KP_0, IBus.KEY_KP_1, IBus.KEY_KP_2, IBus.KEY_KP_3, IBus.KEY_KP_4,
-    IBus.KEY_KP_5, IBus.KEY_KP_6, IBus.KEY_KP_7, IBus.KEY_KP_8, IBus.KEY_KP_9,
-    IBus.KEY_KP_Insert, IBus.KEY_KP_End, IBus.KEY_KP_Down, IBus.KEY_KP_Page_Down,
-    IBus.KEY_KP_Left, IBus.KEY_KP_Begin, IBus.KEY_KP_Right,
-    IBus.KEY_KP_Home, IBus.KEY_KP_Up, IBus.KEY_KP_Page_Up,
-    IBus.KEY_KP_Delete, IBus.KEY_KP_Decimal, IBus.KEY_KP_Separator,
-    IBus.KEY_KP_Add, IBus.KEY_KP_Subtract, IBus.KEY_KP_Multiply, IBus.KEY_KP_Divide,
-    IBus.KEY_KP_Enter, IBus.KEY_Num_Lock
+# Numpad (Keypad) tugmalarini doimiy raqamga o'girish xaritasi (NumLock o'chiq bo'lsa ham)
+KP_NUM_MAP = {
+    IBus.KEY_KP_0: '0',
+    IBus.KEY_KP_1: '1',
+    IBus.KEY_KP_2: '2',
+    IBus.KEY_KP_3: '3',
+    IBus.KEY_KP_4: '4',
+    IBus.KEY_KP_5: '5',
+    IBus.KEY_KP_6: '6',
+    IBus.KEY_KP_7: '7',
+    IBus.KEY_KP_8: '8',
+    IBus.KEY_KP_9: '9',
+    IBus.KEY_KP_Insert: '0',
+    IBus.KEY_KP_End: '1',
+    IBus.KEY_KP_Down: '2',
+    IBus.KEY_KP_Page_Down: '3',
+    IBus.KEY_KP_Left: '4',
+    IBus.KEY_KP_Begin: '5',
+    IBus.KEY_KP_Right: '6',
+    IBus.KEY_KP_Home: '7',
+    IBus.KEY_KP_Up: '8',
+    IBus.KEY_KP_Page_Up: '9',
+    IBus.KEY_KP_Delete: '.',
+    IBus.KEY_KP_Decimal: '.',
 }
 
 # Maxsus navigatsiya tugmalari
@@ -60,7 +75,7 @@ ENGINE_NAME = "yangialifbo"
 
 
 class XkbLayoutWatcher:
-    """Tizimda faol klaviatura tartibini Xwayland / X11 orqali aniqlash"""
+    """Tizimda faol klaviatura tartibini Xwayland / X11 / D-Bus orqali aniqlash"""
     def __init__(self):
         self.d = None
         self.atom = None
@@ -83,24 +98,22 @@ class XkbLayoutWatcher:
         except Exception:
             self.d = None
 
-    def is_uz_active(self):
+    def get_layout(self):
         if not HAS_XLIB:
-            return True
+            return "uz"
         if not self.d:
             self._connect()
         if not self.d:
-            return True
+            return "uz"
         try:
             prop = self.root.get_full_property(self.atom, 0)
             if prop and prop.value:
                 parts = prop.value.decode('latin1', errors='ignore').split('\x00')
                 if len(parts) >= 3:
-                    layout = parts[2].strip()
-                    # Agar aktiv layout 'uz' bo'lsa True, 'us' yoki 'ru' bo'lsa False!
-                    return layout == "uz"
+                    return parts[2].strip()
         except Exception:
             self.d = None
-        return True
+        return "uz"
 
 
 class YangiAlifboEngine(IBus.Engine):
@@ -111,6 +124,7 @@ class YangiAlifboEngine(IBus.Engine):
         self.bus = bus
         self.buffer = ""
         self.is_enabled = True
+        self.force_enabled_in_us = False
         self.prop_toggle = None
         self.timeout_id = 0
         self.layout_watcher = XkbLayoutWatcher()
@@ -164,16 +178,22 @@ class YangiAlifboEngine(IBus.Engine):
 
     def do_property_activate(self, prop_name, state):
         if prop_name == "yangialifbo_toggle":
-            self.toggle_enabled()
+            layout = self.layout_watcher.get_layout()
+            if layout == "uz":
+                self.is_enabled = not self.is_enabled
+            else:
+                self.force_enabled_in_us = not self.force_enabled_in_us
+            self._flush_buffer()
+            self._update_property_state()
         elif prop_name == "yangialifbo_about":
             os.system("xdg-open 'https://224.uz/alifbo/' >/dev/null 2>&1 &")
 
-    def toggle_enabled(self):
-        self.is_enabled = not self.is_enabled
-        self._flush_buffer()
+    def _update_property_state(self):
         if self.prop_toggle:
+            layout = self.layout_watcher.get_layout()
+            active = self.is_enabled if layout == "uz" else self.force_enabled_in_us
             self.prop_toggle.set_state(
-                IBus.PropState.CHECKED if self.is_enabled else IBus.PropState.UNCHECKED
+                IBus.PropState.CHECKED if active else IBus.PropState.UNCHECKED
             )
             self.update_property(self.prop_toggle)
 
@@ -202,13 +222,42 @@ class YangiAlifboEngine(IBus.Engine):
         if state & IBus.ModifierType.RELEASE_MASK:
             return False
 
-        # 2. Ctrl, Alt yoki Super tugmalari kombinatsiyasini tekshirish
+        # 2. Numpad (Raqamlar bloki) tugmalarini doimiy raqamga o'girish
+        # NumLock o'chib qolsa ham har doim raqamlar yozilishini ta'minlaydi
+        if keyval in KP_NUM_MAP and not (state & IBus.ModifierType.SHIFT_MASK):
+            self._flush_buffer()
+            digit = KP_NUM_MAP[keyval]
+            self.commit_text(IBus.Text.new_from_string(digit))
+            return True
+
+        if keyval in (IBus.KEY_KP_Add, IBus.KEY_KP_Subtract, IBus.KEY_KP_Multiply, IBus.KEY_KP_Divide):
+            self._flush_buffer()
+            char_map = {
+                IBus.KEY_KP_Add: '+',
+                IBus.KEY_KP_Subtract: '-',
+                IBus.KEY_KP_Multiply: '*',
+                IBus.KEY_KP_Divide: '/',
+            }
+            self.commit_text(IBus.Text.new_from_string(char_map[keyval]))
+            return True
+
+        if keyval in (IBus.KEY_KP_Enter, IBus.KEY_Num_Lock):
+            self._flush_buffer()
+            return False
+
+        # 3. Ctrl, Alt yoki Super tugmalari kombinatsiyasini tekshirish
         has_ctrl = bool(state & IBus.ModifierType.CONTROL_MASK)
         has_alt = bool(state & (IBus.ModifierType.MOD1_MASK | IBus.ModifierType.MOD4_MASK))
 
-        # Ctrl+Alt+Y — Yoqish / O'chirish
+        # Ctrl+Alt+Y — Tartibga mos yoqish / o'chirish
         if has_ctrl and has_alt and keyval in (IBus.KEY_y, IBus.KEY_Y):
-            self.toggle_enabled()
+            layout = self.layout_watcher.get_layout()
+            if layout == "uz":
+                self.is_enabled = not self.is_enabled
+            else:
+                self.force_enabled_in_us = not self.force_enabled_in_us
+            self._flush_buffer()
+            self._update_property_state()
             return True
 
         # Boshqa barcha Ctrl / Alt / Super kombinatsiyalarida buferni bo'shatib, to'g'ridan-to'g'ri o'tkazamiz
@@ -216,18 +265,20 @@ class YangiAlifboEngine(IBus.Engine):
             self._flush_buffer()
             return False
 
-        # 3. Agar drayver vaqtincha o'chirilgan bo'lsa
+        # 4. Klaviaturani tekshirish:
+        # UZ tartibida: doimo avtomatik faol (agar is_enabled bo'lsa)
+        # US (yoki boshqa) tartibida: faqat foydalanuvchi Ctrl+Alt+Y orqali yoqqan bo'lsa faol
         if not self.is_enabled:
             return False
 
-        # 4. Faqat Uzbek Latin (uz) tartibida ishlash:
-        # Agar hozir US yoki RU rejimida bo'lsak, almashtirish bajarmaymiz
-        if not self.layout_watcher.is_uz_active():
+        layout = self.layout_watcher.get_layout()
+        is_uz = (layout == "uz")
+        if not (is_uz or self.force_enabled_in_us):
             self._flush_buffer()
             return False
 
-        # 5. Numpad yoki navigatsiya tugmalari bo'lsa darhol buferni bo'shatib, ilovaga o'tkazamiz
-        if keyval in NUMPAD_KEYVALS or keyval in NAV_KEYVALS:
+        # 5. Navigatsiya tugmalari bo'lsa darhol buferni bo'shatib, ilovaga o'tkazamiz
+        if keyval in NAV_KEYVALS:
             self._flush_buffer()
             return False
 
