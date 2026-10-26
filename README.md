@@ -17,8 +17,9 @@ Siz odatdagidek yozasiz — klaviatura esa yangi alifboga avtomatik ögiradi:
 ### Asosiy afzalliklari:
 1. **Özbekça (uz) tartibida avtomatik:** Tizim klaviaturasi `uz` (Özbek lotin) holatida bölganda harflar avtomatik alişadi.
 2. **Inglizça (us) tartibida bezovta qilmaydi:** Ingliz tilida odatiy yoziladi (`sh`, `ch` özgarmaydi). Agar ingliz tilida ham kerak bölsa, `Ctrl + Alt + Y` orqali yoqiladi.
-3. **Numpad (raqamlar bloki) doimiy işlaydi:** NumLock tugmasi öçiq yoki yoniq bölişidan qatʼi nazar, öng tarafdagi raqamlar klaviaturasi har doim raqam yozadi.
-4. **Resurs sarfi minimal:** Bor-yöği ~20 MB operativ xotira (RAM) oladi, protsessorga nol yuklama.
+3. **Qulf ekrani (lockscreen) va Numpad to'liq mos:** Parol kiritishda va lockscreen holatida numpad nuqtasi hamda barcha navigatsiya tugmalari to'siqsiz, to'g'ridan-to'g'ri işlaydi.
+4. **Siçqonça harakatlari bilan mukammal integratsiya:** Kursor özgarganda yoki matn nusxalanib paste qilinganda bufer darhol moslaşadi (Enter va Backspace qotmaydi).
+5. **Resurs sarfi minimal:** Bor-yöği ~20 MB operativ xotira (RAM) oladi, protsessorga nol yuklama.
 
 ---
 

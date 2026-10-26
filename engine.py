@@ -14,7 +14,8 @@ Avtomatik almashtirishlar:
 Universal imkoniyatlar:
   - Uzbek Latin (uz) klaviatura tartibida 100% avtomatik ishlaydi
   - US (English) tartibida odatiy yozuv, kerak bo'lsa Ctrl+Alt+Y orqali yoqiladi
-  - Numpad (raqamlar bloki) NumLock holatidan qat'i nazar har doim raqam yozadi
+  - Numpad (raqamlar bloki) va lockscreen to'siqsiz, to'g'ridan-to'g'ri o'tkaziladi
+  - Sichqoncha harakatlari (click, selection, middle-paste) da bufer darhol sinxronlanadi
   - Wayland (COSMIC, GNOME, KDE) va eski X11 tizimlarida universal ishlaydi
   - Preedit desinxronizatsiyasi yo'q (harflar 2 marta takrorlanmaydi)
 """
@@ -36,35 +37,21 @@ except ImportError:
 APOSTROPHES = {"'", "`", "‘", "’", "ʻ", "ʼ", chr(0x02BB), chr(0x02BC)}
 PREFIX_KEYS = {'s', 'S', 'c', 'C', 'o', 'O', 'g', 'G'}
 
-# Numpad (Keypad) tugmalarini doimiy raqamga o'girish xaritasi (NumLock o'chiq bo'lsa ham)
-KP_NUM_MAP = {
-    IBus.KEY_KP_0: '0',
-    IBus.KEY_KP_1: '1',
-    IBus.KEY_KP_2: '2',
-    IBus.KEY_KP_3: '3',
-    IBus.KEY_KP_4: '4',
-    IBus.KEY_KP_5: '5',
-    IBus.KEY_KP_6: '6',
-    IBus.KEY_KP_7: '7',
-    IBus.KEY_KP_8: '8',
-    IBus.KEY_KP_9: '9',
-    IBus.KEY_KP_Insert: '0',
-    IBus.KEY_KP_End: '1',
-    IBus.KEY_KP_Down: '2',
-    IBus.KEY_KP_Page_Down: '3',
-    IBus.KEY_KP_Left: '4',
-    IBus.KEY_KP_Begin: '5',
-    IBus.KEY_KP_Right: '6',
-    IBus.KEY_KP_Home: '7',
-    IBus.KEY_KP_Up: '8',
-    IBus.KEY_KP_Page_Up: '9',
-    IBus.KEY_KP_Delete: '.',
-    IBus.KEY_KP_Decimal: '.',
+# Numpad (Keypad) va NumLock tugmalari — xavfsiz va to'siqsiz to'g'ridan-to'g'ri o'tkaziladi
+NUMPAD_KEYVALS = {
+    IBus.KEY_KP_0, IBus.KEY_KP_1, IBus.KEY_KP_2, IBus.KEY_KP_3, IBus.KEY_KP_4,
+    IBus.KEY_KP_5, IBus.KEY_KP_6, IBus.KEY_KP_7, IBus.KEY_KP_8, IBus.KEY_KP_9,
+    IBus.KEY_KP_Insert, IBus.KEY_KP_End, IBus.KEY_KP_Down, IBus.KEY_KP_Page_Down,
+    IBus.KEY_KP_Left, IBus.KEY_KP_Begin, IBus.KEY_KP_Right,
+    IBus.KEY_KP_Home, IBus.KEY_KP_Up, IBus.KEY_KP_Page_Up,
+    IBus.KEY_KP_Delete, IBus.KEY_KP_Decimal, IBus.KEY_KP_Separator,
+    IBus.KEY_KP_Add, IBus.KEY_KP_Subtract, IBus.KEY_KP_Multiply, IBus.KEY_KP_Divide,
+    IBus.KEY_KP_Enter, IBus.KEY_Num_Lock
 }
 
-# Maxsus navigatsiya tugmalari
+# Maxsus navigatsiya va boshqaruv tugmalari
 NAV_KEYVALS = {
-    IBus.KEY_Return, IBus.KEY_Tab,
+    IBus.KEY_Return, IBus.KEY_KP_Enter, IBus.KEY_Tab, IBus.KEY_ISO_Left_Tab,
     IBus.KEY_Left, IBus.KEY_Right, IBus.KEY_Up, IBus.KEY_Down,
     IBus.KEY_Home, IBus.KEY_End, IBus.KEY_Page_Up, IBus.KEY_Page_Down,
     IBus.KEY_Delete, IBus.KEY_Insert
@@ -75,7 +62,7 @@ ENGINE_NAME = "yangialifbo"
 
 
 class XkbLayoutWatcher:
-    """Tizimda faol klaviatura tartibini Xwayland / X11 / D-Bus orqali aniqlash"""
+    """Tizimda faol klaviatura tartibini Xwayland / X11 orqali aniqlash"""
     def __init__(self):
         self.d = None
         self.atom = None
@@ -136,6 +123,8 @@ class YangiAlifboEngine(IBus.Engine):
         self._flush_buffer()
 
     def do_focus_in(self):
+        self._cancel_timeout()
+        self.buffer = ""
         self._init_properties()
 
     def do_focus_out(self):
@@ -144,6 +133,16 @@ class YangiAlifboEngine(IBus.Engine):
     def do_reset(self):
         self._cancel_timeout()
         self.buffer = ""
+
+    def do_set_cursor_location(self, x, y, w, h):
+        # Sichqoncha bilan bosilganda kursor o'zgarganda buferni tozalash
+        if self.buffer:
+            self._flush_buffer()
+
+    def do_set_surrounding_text(self, text, cursor_pos, anchor_pos):
+        # Matn tanlanganda yoki sichqoncha bilan paste qilinganda buferni tozalash
+        if self.buffer:
+            self._flush_buffer()
 
     def _init_properties(self):
         prop_list = IBus.PropList()
@@ -222,35 +221,19 @@ class YangiAlifboEngine(IBus.Engine):
         if state & IBus.ModifierType.RELEASE_MASK:
             return False
 
-        # 2. Numpad (Raqamlar bloki) tugmalarini doimiy raqamga o'girish
-        # NumLock o'chib qolsa ham har doim raqamlar yozilishini ta'minlaydi
-        if keyval in KP_NUM_MAP and not (state & IBus.ModifierType.SHIFT_MASK):
-            self._flush_buffer()
-            digit = KP_NUM_MAP[keyval]
-            self.commit_text(IBus.Text.new_from_string(digit))
-            return True
-
-        if keyval in (IBus.KEY_KP_Add, IBus.KEY_KP_Subtract, IBus.KEY_KP_Multiply, IBus.KEY_KP_Divide):
-            self._flush_buffer()
-            char_map = {
-                IBus.KEY_KP_Add: '+',
-                IBus.KEY_KP_Subtract: '-',
-                IBus.KEY_KP_Multiply: '*',
-                IBus.KEY_KP_Divide: '/',
-            }
-            self.commit_text(IBus.Text.new_from_string(char_map[keyval]))
-            return True
-
-        if keyval in (IBus.KEY_KP_Enter, IBus.KEY_Num_Lock):
+        # 2. Numpad (Keypad) va navigatsiya tugmalari to'g'ridan-to'g'ri o'tkaziladi
+        # Bu qulf ekrani (lockscreen), parol oynalari va numpad nuqtasining benuqson ishlashini ta'minlaydi
+        if keyval in NUMPAD_KEYVALS or keyval in NAV_KEYVALS:
             self._flush_buffer()
             return False
 
         # 3. Ctrl, Alt yoki Super tugmalari kombinatsiyasini tekshirish
         has_ctrl = bool(state & IBus.ModifierType.CONTROL_MASK)
-        has_alt = bool(state & (IBus.ModifierType.MOD1_MASK | IBus.ModifierType.MOD4_MASK))
+        has_alt = bool(state & IBus.ModifierType.MOD1_MASK)
+        has_super = bool(state & (IBus.ModifierType.MOD4_MASK | IBus.ModifierType.SUPER_MASK))
 
         # Ctrl+Alt+Y — Tartibga mos yoqish / o'chirish
-        if has_ctrl and has_alt and keyval in (IBus.KEY_y, IBus.KEY_Y):
+        if has_ctrl and has_alt and not has_super and keyval in (IBus.KEY_y, IBus.KEY_Y):
             layout = self.layout_watcher.get_layout()
             if layout == "uz":
                 self.is_enabled = not self.is_enabled
@@ -261,7 +244,7 @@ class YangiAlifboEngine(IBus.Engine):
             return True
 
         # Boshqa barcha Ctrl / Alt / Super kombinatsiyalarida buferni bo'shatib, to'g'ridan-to'g'ri o'tkazamiz
-        if has_ctrl or has_alt or (state & IBus.ModifierType.SUPER_MASK):
+        if has_ctrl or has_alt or has_super:
             self._flush_buffer()
             return False
 
@@ -277,12 +260,7 @@ class YangiAlifboEngine(IBus.Engine):
             self._flush_buffer()
             return False
 
-        # 5. Navigatsiya tugmalari bo'lsa darhol buferni bo'shatib, ilovaga o'tkazamiz
-        if keyval in NAV_KEYVALS:
-            self._flush_buffer()
-            return False
-
-        # 6. Escape tugmasi: agar buferda kutilayotgan harf bo'lsa uni bekor qiladi
+        # 5. Escape tugmasi: agar buferda kutilayotgan harf bo'lsa uni bekor qiladi
         if keyval == IBus.KEY_Escape:
             if self.buffer:
                 self._cancel_timeout()
@@ -290,7 +268,7 @@ class YangiAlifboEngine(IBus.Engine):
                 return True
             return False
 
-        # 7. Backspace: agar buferda kutilayotgan harf bo'lsa uni bekor qiladi, bo'lmasa ilovaga o'tkazadi
+        # 6. Backspace: agar buferda kutilayotgan harf bo'lsa uni bekor qiladi, bo'lmasa ilovaga o'tkazadi
         if keyval == IBus.KEY_BackSpace:
             if self.buffer:
                 self._cancel_timeout()
@@ -298,7 +276,7 @@ class YangiAlifboEngine(IBus.Engine):
                 return True
             return False
 
-        # 8. Space tugmasi
+        # 7. Space tugmasi
         if keyval in (IBus.KEY_space, IBus.KEY_KP_Space):
             if self.buffer:
                 self._cancel_timeout()
@@ -308,7 +286,7 @@ class YangiAlifboEngine(IBus.Engine):
                 return True
             return False
 
-        # 9. Oddiy belgiga aylantirish
+        # 8. Oddiy belgiga aylantirish
         char = IBus.keyval_to_unicode(keyval)
         if not char or ord(char) < 32:
             self._flush_buffer()
@@ -319,18 +297,18 @@ class YangiAlifboEngine(IBus.Engine):
             self._flush_buffer()
             return False
 
-        # 10. Agar bufer bo'sh bo'lsa
+        # 9. Agar bufer bo'sh bo'lsa
         if not self.buffer:
             if char in PREFIX_KEYS:
                 self.buffer = char
                 self._cancel_timeout()
-                # 1500 ms ichida keyingi harf bosilmasa avtomatik commit qilish
-                self.timeout_id = GLib.timeout_add(1500, self._on_timeout)
+                # 600 ms ichida keyingi harf bosilmasa avtomatik commit qilish
+                self.timeout_id = GLib.timeout_add(600, self._on_timeout)
                 return True
             # Prefiks bo'lmasa (raqamlar, boshqa harflar va belgilar) darhol ilovaga o'tadi
             return False
 
-        # 11. Buferda prefiks harf bo'lsa, almashtirish qoidasini tekshiramiz
+        # 10. Buferda prefiks harf bo'lsa, almashtirish qoidasini tekshiramiz
         self._cancel_timeout()
         prev = self.buffer
         rep = None
@@ -360,7 +338,7 @@ class YangiAlifboEngine(IBus.Engine):
         if char in PREFIX_KEYS:
             self.commit_text(IBus.Text.new_from_string(prev))
             self.buffer = char
-            self.timeout_id = GLib.timeout_add(1500, self._on_timeout)
+            self.timeout_id = GLib.timeout_add(600, self._on_timeout)
             return True
 
         # Oddiy holat: oldingi belgini va yangi belgini birga chiqaramiz (masalan "sa", "oz", "s1")
