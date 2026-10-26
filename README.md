@@ -93,7 +93,9 @@ Pop!_OS 24.04+ yangi Rust asosidagi COSMIC muhitida (Wayland) IBus integratsiyas
 1. **Tilni almashtirish:** `Super (Win) + Boʻsh joy (Space)` orqali kiritish usulini tanlaysiz.
 2. **Vaqtincha yoqish / oʻchirish (Hot-key):**
    - Istalgan vaqtda `Ctrl + Alt + Y` tugmalarini bosish orqali dvigatelni yoqish yoki vaqtincha toʻxtatish mumkin.
-3. **Tray belgisi:** Yuqori panelda (system tray) maxsus `ş` belgisi aks etadi. Uni bosib holatni tekshirish yoki [224.uz/alifbo](https://224.uz/alifbo/) saytiga oʻtish mumkin.
+3. **Tizim paneli integratsiyasi (GNOME / KDE):**
+   - Standart GNOME va KDE ish stollarida yuqori paneldagi til indikatorida maxsus **`ş`** belgisi aks etadi. Uni bosganda [224.uz/alifbo](https://224.uz/alifbo/) saytiga oʻtish va holatni koʻrish menyusi chiqadi.
+   - Pop!_OS COSMIC va boshqa yengil oynali muhitlarda (i3, Sway) dvigatel orqa fonda xalaqit bermasdan ishlaydi va barcha boshqaruv `Ctrl + Alt + Y` orqali amalga oshiriladi.
 
 ---
 
