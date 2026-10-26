@@ -15,7 +15,7 @@
             <license>MIT</license>
             <author>His perspective</author>
             <icon>/home/acer/.local/share/ibus-yangialifbo/yangialifbo.svg</icon>
-            <layout>us</layout>
+            <layout>default</layout>
             <longname>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ)</longname>
             <description>sh-&gt;ş, ch-&gt;ç, o'-&gt;ö, g'-&gt;ğ avtomatik almashtiruvchi kiritish usuli</description>
             <rank>99</rank>

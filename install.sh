@@ -75,7 +75,7 @@ cat > "$COMPONENT_DIR/yangialifbo.xml" <<EOF
             <license>MIT</license>
             <author>His perspective</author>
             <icon>${INSTALL_DIR}/yangialifbo.svg</icon>
-            <layout>us</layout>
+            <layout>default</layout>
             <longname>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ)</longname>
             <description>sh-&gt;ş, ch-&gt;ç, o'-&gt;ö, g'-&gt;ğ avtomatik almashtirish</description>
             <rank>99</rank>
