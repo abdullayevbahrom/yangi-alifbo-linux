@@ -28,12 +28,6 @@ gi.require_version('IBus', '1.0')
 gi.require_version('GLib', '2.0')
 from gi.repository import IBus, GLib
 
-try:
-    from Xlib import display
-    HAS_XLIB = True
-except ImportError:
-    HAS_XLIB = False
-
 APOSTROPHES = {"'", "`", "‘", "’", "ʻ", "ʼ", chr(0x02BB), chr(0x02BC)}
 PREFIX_KEYS = {'s', 'S', 'c', 'C', 'o', 'O', 'g', 'G'}
 
@@ -61,48 +55,6 @@ COMPONENT_NAME = "org.freedesktop.IBus.YangiAlifbo"
 ENGINE_NAME = "yangialifbo"
 
 
-class XkbLayoutWatcher:
-    """Tizimda faol klaviatura tartibini Xwayland / X11 orqali aniqlash"""
-    def __init__(self):
-        self.d = None
-        self.atom = None
-        self.root = None
-        if HAS_XLIB:
-            self._connect()
-
-    def _connect(self):
-        try:
-            disp_name = os.environ.get("DISPLAY")
-            if not disp_name:
-                for d in (":1", ":0"):
-                    if os.path.exists(f"/tmp/.X11-unix/X{d.lstrip(':')}"):
-                        disp_name = d
-                        break
-            if disp_name:
-                self.d = display.Display(disp_name)
-                self.atom = self.d.get_atom('_XKB_RULES_NAMES')
-                self.root = self.d.screen().root
-        except Exception:
-            self.d = None
-
-    def get_layout(self):
-        if not HAS_XLIB:
-            return "uz"
-        if not self.d:
-            self._connect()
-        if not self.d:
-            return "uz"
-        try:
-            prop = self.root.get_full_property(self.atom, 0)
-            if prop and prop.value:
-                parts = prop.value.decode('latin1', errors='ignore').split('\x00')
-                if len(parts) >= 3:
-                    return parts[2].strip()
-        except Exception:
-            self.d = None
-        return "uz"
-
-
 class YangiAlifboEngine(IBus.Engine):
     __gtype_name__ = 'YangiAlifboEngine'
 
@@ -111,10 +63,8 @@ class YangiAlifboEngine(IBus.Engine):
         self.bus = bus
         self.buffer = ""
         self.is_enabled = True
-        self.force_enabled_in_us = False
         self.prop_toggle = None
         self.timeout_id = 0
-        self.layout_watcher = XkbLayoutWatcher()
 
     def do_enable(self):
         self._init_properties()
@@ -177,11 +127,7 @@ class YangiAlifboEngine(IBus.Engine):
 
     def do_property_activate(self, prop_name, state):
         if prop_name == "yangialifbo_toggle":
-            layout = self.layout_watcher.get_layout()
-            if layout == "uz":
-                self.is_enabled = not self.is_enabled
-            else:
-                self.force_enabled_in_us = not self.force_enabled_in_us
+            self.is_enabled = not self.is_enabled
             self._flush_buffer()
             self._update_property_state()
         elif prop_name == "yangialifbo_about":
@@ -189,10 +135,8 @@ class YangiAlifboEngine(IBus.Engine):
 
     def _update_property_state(self):
         if self.prop_toggle:
-            layout = self.layout_watcher.get_layout()
-            active = self.is_enabled if layout == "uz" else self.force_enabled_in_us
             self.prop_toggle.set_state(
-                IBus.PropState.CHECKED if active else IBus.PropState.UNCHECKED
+                IBus.PropState.CHECKED if self.is_enabled else IBus.PropState.UNCHECKED
             )
             self.update_property(self.prop_toggle)
 
@@ -232,13 +176,9 @@ class YangiAlifboEngine(IBus.Engine):
         has_alt = bool(state & IBus.ModifierType.MOD1_MASK)
         has_super = bool(state & (IBus.ModifierType.MOD4_MASK | IBus.ModifierType.SUPER_MASK))
 
-        # Ctrl+Alt+Y — Tartibga mos yoqish / o'chirish
+        # Ctrl+Alt+Y — Drayverni vaqtincha yoqish / o'chirish
         if has_ctrl and has_alt and not has_super and keyval in (IBus.KEY_y, IBus.KEY_Y):
-            layout = self.layout_watcher.get_layout()
-            if layout == "uz":
-                self.is_enabled = not self.is_enabled
-            else:
-                self.force_enabled_in_us = not self.force_enabled_in_us
+            self.is_enabled = not self.is_enabled
             self._flush_buffer()
             self._update_property_state()
             return True
@@ -248,16 +188,8 @@ class YangiAlifboEngine(IBus.Engine):
             self._flush_buffer()
             return False
 
-        # 4. Klaviaturani tekshirish:
-        # UZ tartibida: doimo avtomatik faol (agar is_enabled bo'lsa)
-        # US (yoki boshqa) tartibida: faqat foydalanuvchi Ctrl+Alt+Y orqali yoqqan bo'lsa faol
+        # 4. Agar drayver Ctrl+Alt+Y orqali o'chirilgan bo'lsa
         if not self.is_enabled:
-            return False
-
-        layout = self.layout_watcher.get_layout()
-        is_uz = (layout == "uz")
-        if not (is_uz or self.force_enabled_in_us):
-            self._flush_buffer()
             return False
 
         # 5. Escape tugmasi: agar buferda kutilayotgan harf bo'lsa uni bekor qiladi
