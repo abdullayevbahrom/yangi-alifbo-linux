@@ -4,7 +4,7 @@
     <description>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ) Kirish Dvigateli</description>
     <exec>/home/acer/.local/share/ibus-yangialifbo/engine.py --ibus</exec>
     <version>1.0.0</version>
-    <author>His perspective &lt;https://t.me/hisperspective&gt;</author>
+    <author>Bahrom Abdullayev &amp; His perspective</author>
     <license>MIT</license>
     <homepage>https://224.uz/alifbo/</homepage>
     <textdomain>ibus-yangialifbo</textdomain>
@@ -13,7 +13,7 @@
             <name>yangialifbo</name>
             <language>uz</language>
             <license>MIT</license>
-            <author>His perspective</author>
+            <author>Bahrom Abdullayev &amp; His perspective</author>
             <icon>/home/acer/.local/share/ibus-yangialifbo/yangialifbo.svg</icon>
             <layout>default</layout>
             <longname>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ)</longname>

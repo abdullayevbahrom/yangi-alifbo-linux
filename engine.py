@@ -3,7 +3,7 @@
 """
 Yangi Alifbo — Linux IBus Kirish Dvigateli
 224.uz/alifbo loyihasi (https://224.uz/alifbo/#klaviatura) asosida
-Muallif: His perspective (https://t.me/hisperspective)
+Mualliflar: Bahrom Abdullayev (https://github.com/abdullayevbahrom) & His perspective (https://t.me/hisperspective)
 
 Avtomatik almashtirishlar:
   sh -> ş,  Sh -> Ş,  SH -> Ş,  sH -> ş

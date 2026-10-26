@@ -2,7 +2,7 @@
 #
 # Yangi Alifbo (Linux) — O'rnatish Skripti
 # 224.uz/alifbo loyihasi asosida
-# Muallif: His perspective (https://t.me/hisperspective)
+# Mualliflar: Bahrom Abdullayev (https://github.com/abdullayevbahrom) & His perspective (https://t.me/hisperspective)
 #
 
 set -e
@@ -66,7 +66,7 @@ cat > "$COMPONENT_DIR/yangialifbo.xml" <<EOF
     <description>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ) Kirish Dvigateli</description>
     <exec>${INSTALL_DIR}/engine.py --ibus</exec>
     <version>1.0.1</version>
-    <author>His perspective &lt;https://t.me/hisperspective&gt;</author>
+    <author>Bahrom Abdullayev &amp; His perspective</author>
     <license>MIT</license>
     <homepage>https://224.uz/alifbo/</homepage>
     <textdomain>ibus-yangialifbo</textdomain>
@@ -75,7 +75,7 @@ cat > "$COMPONENT_DIR/yangialifbo.xml" <<EOF
             <name>yangialifbo</name>
             <language>uz</language>
             <license>MIT</license>
-            <author>His perspective</author>
+            <author>Bahrom Abdullayev &amp; His perspective</author>
             <icon>${INSTALL_DIR}/yangialifbo.svg</icon>
             <layout>default</layout>
             <longname>Yangi Oʻzbek Alifbosi (ş, ç, ö, ğ)</longname>

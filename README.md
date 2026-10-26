@@ -134,5 +134,5 @@ Pop!_OS 24.04+ yangi Rust asosidagi COSMIC muhitida (Wayland) IBus integratsiyas
 ## 📄 Mualliflik va Litsenziya
 
 - **Gʻoya va qoidalar:** [224.uz/alifbo](https://224.uz/alifbo/)
-- **Dastur muallifi:** [His perspective](https://t.me/hisperspective) ([GitHub](https://github.com/abdullayevbahrom))
+- **Dastur mualliflari:** Bahrom Abdullayev ([@abdullayevbahrom](https://github.com/abdullayevbahrom)) & [His perspective](https://t.me/hisperspective)
 - **Litsenziya:** MIT License — erkin va ochiq kodli dasturiy taʼminot.
