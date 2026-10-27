@@ -14,7 +14,7 @@ Avtomatik almashtirishlar:
 Universal imkoniyatlar:
   - Uzbek Latin (uz) klaviatura tartibida 100% avtomatik ishlaydi
   - US (English) tartibida odatiy yozuv, kerak bo'lsa Ctrl+Alt+Y orqali yoqiladi
-  - Numpad (raqamlar bloki) va lockscreen to'siqsiz, to'g'ridan-to'g'ri o'tkaziladi
+  - Numpad (raqamlar bloki va nuqta) qulf ekrani (lockscreen) va barcha oynalarda to'siqsiz ishlaydi
   - Sichqoncha harakatlari (click, selection, middle-paste) da bufer darhol sinxronlanadi
   - Wayland (COSMIC, GNOME, KDE) va eski X11 tizimlarida universal ishlaydi
   - Preedit desinxronizatsiyasi yo'q (harflar 2 marta takrorlanmaydi)
@@ -30,8 +30,10 @@ from gi.repository import IBus, GLib
 
 APOSTROPHES = {"'", "`", "‘", "’", "ʻ", "ʼ", chr(0x02BB), chr(0x02BC)}
 PREFIX_KEYS = {'s', 'S', 'c', 'C', 'o', 'O', 'g', 'G'}
+TIMEOUT_DELAY_MS = 1000  # 1 soniya (1000 ms)
 
-# Numpad (Keypad) va NumLock tugmalari — xavfsiz va to'siqsiz to'g'ridan-to'g'ri o'tkaziladi
+# Numpad (Keypad) va NumLock tugmalari — to'g'ridan-to'g'ri tizimga o'tkaziladi
+# Bu qulf ekrani (lockscreen), parol oynalari va numpad nuqtasining apparat darajasida to'siqsiz ishlashini ta'minlaydi
 NUMPAD_KEYVALS = {
     IBus.KEY_KP_0, IBus.KEY_KP_1, IBus.KEY_KP_2, IBus.KEY_KP_3, IBus.KEY_KP_4,
     IBus.KEY_KP_5, IBus.KEY_KP_6, IBus.KEY_KP_7, IBus.KEY_KP_8, IBus.KEY_KP_9,
@@ -75,7 +77,8 @@ class YangiAlifboEngine(IBus.Engine):
     def do_focus_in(self):
         self._cancel_timeout()
         self.buffer = ""
-        self._init_properties()
+        if not self.prop_toggle:
+            self._init_properties()
 
     def do_focus_out(self):
         self._flush_buffer()
@@ -166,7 +169,7 @@ class YangiAlifboEngine(IBus.Engine):
             return False
 
         # 2. Numpad (Keypad) va navigatsiya tugmalari to'g'ridan-to'g'ri o'tkaziladi
-        # Bu qulf ekrani (lockscreen), parol oynalari va numpad nuqtasining benuqson ishlashini ta'minlaydi
+        # Bu qulf ekrani (lockscreen), parol oynalari va numpad nuqtasining apparat darajasida to'siqsiz ishlashini ta'minlaydi
         if keyval in NUMPAD_KEYVALS or keyval in NAV_KEYVALS:
             self._flush_buffer()
             return False
@@ -234,8 +237,8 @@ class YangiAlifboEngine(IBus.Engine):
             if char in PREFIX_KEYS:
                 self.buffer = char
                 self._cancel_timeout()
-                # 600 ms ichida keyingi harf bosilmasa avtomatik commit qilish
-                self.timeout_id = GLib.timeout_add(600, self._on_timeout)
+                # 1000 ms (1 sekund) ichida keyingi harf bosilmasa avtomatik commit qilish
+                self.timeout_id = GLib.timeout_add(TIMEOUT_DELAY_MS, self._on_timeout)
                 return True
             # Prefiks bo'lmasa (raqamlar, boshqa harflar va belgilar) darhol ilovaga o'tadi
             return False
@@ -270,7 +273,7 @@ class YangiAlifboEngine(IBus.Engine):
         if char in PREFIX_KEYS:
             self.commit_text(IBus.Text.new_from_string(prev))
             self.buffer = char
-            self.timeout_id = GLib.timeout_add(600, self._on_timeout)
+            self.timeout_id = GLib.timeout_add(TIMEOUT_DELAY_MS, self._on_timeout)
             return True
 
         # Oddiy holat: oldingi belgini va yangi belgini birga chiqaramiz (masalan "sa", "oz", "s1")
