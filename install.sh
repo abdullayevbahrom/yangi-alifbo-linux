@@ -95,8 +95,8 @@ fi
 
 echo -e "${GREEN}✓ Dvigatel va komponent muvaffaqiyatli o'rnatildi: $INSTALL_DIR${NC}"
 
-echo -e "\n${BLUE}3. NumLock va Tizim integratsiyasi...${NC}"
-# COSMIC Desktop uchun NumLock-ni BootOn qilib belgilash
+echo -e "\n${BLUE}3. NumLock va Numpad integratsiyasi...${NC}"
+# COSMIC Desktop uchun NumLock va Numpad nuqtasini (kpdl:dot) sozlash
 COSMIC_KB_CONFIG="$TARGET_HOME/.config/cosmic/com.system76.CosmicComp/v1/keyboard_config"
 if [ -d "$(dirname "$COSMIC_KB_CONFIG")" ]; then
     cat > "$COSMIC_KB_CONFIG" <<EOF
@@ -107,11 +107,24 @@ EOF
     echo -e "${GREEN}✓ COSMIC NumLock holati: BootOn (har doim yoniq)${NC}"
 fi
 
-# GNOME Desktop uchun NumLock holati
+COSMIC_XKB_CONFIG="$TARGET_HOME/.config/cosmic/com.system76.CosmicComp/v1/xkb_config"
+if [ -f "$COSMIC_XKB_CONFIG" ]; then
+    # Numpad nuqtasi ruscha va boshqa tartiblarda ham vergul emas, doimo nuqta bo'lishi uchun
+    if grep -q 'options: None' "$COSMIC_XKB_CONFIG"; then
+        sed -i 's/options: None/options: Some("kpdl:dot")/' "$COSMIC_XKB_CONFIG"
+    elif grep -q 'options: Some' "$COSMIC_XKB_CONFIG" && ! grep -q 'kpdl:dot' "$COSMIC_XKB_CONFIG"; then
+        sed -i 's/options: Some("\([^"]*\)")/options: Some("\1,kpdl:dot")/' "$COSMIC_XKB_CONFIG"
+    fi
+    echo -e "${GREEN}✓ COSMIC Numpad nuqtasi sozlamasi: kpdl:dot (doimiy nuqta)${NC}"
+fi
+
+# GNOME Desktop uchun NumLock va Numpad nuqtasi
 if command -v gsettings >/dev/null 2>&1; then
     gsettings set org.gnome.desktop.peripherals.keyboard remember-numlock-state true 2>/dev/null || true
     gsettings set org.gnome.desktop.peripherals.keyboard numlock-state true 2>/dev/null || true
     gsettings set org.freedesktop.ibus.general use-system-keyboard-layout true 2>/dev/null || true
+    gsettings set org.gnome.desktop.input-sources xkb-options "['kpdl:dot']" 2>/dev/null || true
+    echo -e "${GREEN}✓ GNOME / XKB Numpad nuqtasi sozlamasi: kpdl:dot${NC}"
 fi
 
 echo -e "\n${BLUE}4. IBus keshini yangilash va qayta ishga tushirish...${NC}"
